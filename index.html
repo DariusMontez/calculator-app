@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>Calculator</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  
+    <style>
+      html {height: 100%;}
+      body {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        font-size: 1.2em;
+        font-family: sans-serif;
+        background: #333;
+        color: #777;
+      }
+
+      #display {        
+        padding: 0 16px;
+        background: white;
+        text-align: right;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        z-index: 2;
+      }
+
+      #exp {
+        font-size: 2.5em;
+        /*line-height: 2.5em;*/
+        height: 1em;
+        margin-top: 4vh;
+        margin-bottom: 4vh;
+      }
+
+      #result {
+        color: #888;
+        font-size: 1.25em;
+        /*line-height: 1.25em;*/
+        height: 1em;
+        margin-bottom: 4vh;
+      }
+      
+      #keyboard {
+        grid-row: 2/2;
+        display: grid;
+        grid-template-columns: 12fr 3fr 24px;
+        /*max-width: 678px;*/
+        height: 100%;
+        margin: 0 auto;
+        position: relative;
+        overflow: hidden;
+      }
+
+      #keyboard-digits {
+        grid-column: 1/1;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        background: #414141;
+        font-size: 1.5em;
+      }
+      
+      #keyboard-operators {
+        grid-column: 2/2;
+        display: grid;
+        grid-template-columns: 1fr;
+        background: #6a6a6a;
+      }
+
+      #keyboard-specials {
+        grid-column: 3/3;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        background: #1DE9B6;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        z-index: 1;
+
+        
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: calc(100vw - 72px);
+        
+        transition: transform 0.3s ease-in-out;
+      }
+      #keyboard-specials:hover {
+        transform: translateX(calc(-100% + 24px));
+      }
+
+      #keyboard button {
+        border: none;
+        background: transparent;
+        font-size: inherit;
+      }
+      #keyboard button:active {
+        outline: none;
+        background: rgba(255,255,255,0.15);
+      }
+      #keyboard-digits button, 
+      #keyboard-operators button {
+        color: white;
+        line-height: 1em;
+      }
+      #keyboard-operators button big {
+        font-size: 1.5em;
+      }
+      #keyboard-specials button {
+        color: #555;
+        visibility: visible;
+      }
+
+      @media screen and (min-width: 678px), screen and (max-height: 400px) {
+        #keyboard {
+          grid-template-columns: 5fr 2fr 4fr; 
+        }
+        
+        #keyboard-operators {
+          grid-template-columns: 1fr 1fr;
+        }
+        
+        #keyboard-specials {
+          position: relative;
+          width: auto;
+        }
+        #keyboard-specials:hover {
+          transform: none;
+        }
+        
+        #keyboard-specials button {
+          visibility: visible;
+        }
+      }
+
+      /* decrease font size in mobile-landscape */
+      @media screen and (max-height: 450px) {
+        body {
+          font-size: 0.9em;
+        }
+      }
+      
+
+    </style>
+    
+    <script>
+
+Object.prototype.dataBind = function(id, prop, cb) {
+  var el = document.getElementById(id);
+  if (el === null) throw new Error("cannot bind to an element that does not exist");
+  this["$" + id] = el;
+
+  var onchange = "on$" + id;
+  if (cb) this[onchange] = cb;
+
+  Object.defineProperty(this, id, {
+   get: function() {return el[prop];},
+   set: function(value) { 
+     el[prop] = value; 
+     if (this.hasOwnProperty(onchange)) { 
+       console.log(this, id, 'onchange', value); 
+       this[onchange](value); 
+     } 
+   }
+  });
+}
+
+Math.fact = function(num) {
+   var rval = 1;
+   for (var i = 2; i <= num; i++) rval = rval * i;
+   return rval;
+}
+
+var calc = {
+  equals: function() {
+    var clean = (' '+this.exp).slice(1);
+    clean = clean
+      .replace('×', '*')
+      .replace('÷', '/')
+      .replace('sin', 'Math.sin')
+      .replace('cos', 'Math.cos')
+      .replace('tan', 'Math.tan')
+      .replace('log', 'Math.log10')
+      .replace('ln', 'Math.log')
+      .replace('π', 'Math.PI')
+      /*.replace('!', 'Math.fact')*/
+      .replace('√', 'Math.sqrt')
+      .replace('e', 'Math.E');
+    
+    console.log(clean);
+    this.result = parseFloat(eval(clean).toFixed(4)); 
+  },
+
+  equalsBtn: function() {
+    this.equals();
+    this.exp = this.result;
+    this.result = null;
+  },
+  
+  literal: function(e) { this.exp += e.target.textContent; },
+
+  del: function() {this.exp = this.exp.slice(0, -1); },
+
+  div: function() { this.exp += "&div;"; },
+  mul: function() { this.exp += "&times;"; },
+  add: function() { this.exp += "+"; },
+  sub: function() { this.exp += "-"; },
+
+  fn: function(e) { 
+    this.exp = e.target.textContent + "(" + this.exp + ")"; },
+
+  sin: function() { this.exp = ("sin(" + this.exp + ")"); },
+  cos: function() { this.exp = ("cos(" + this.exp + ")"); },
+  tan: function() { this.exp = ("tan(" + this.exp + ")"); },
+  
+  sqrt: function() { this.exp = "&radic;(" + this.exp + ")"; },
+};
+
+window.onload = function() {
+  //calc.$exp = document.getElementById('exp');
+  //calc.exp = calc.$exp.textContent;
+  calc.dataBind('exp', 'innerHTML');
+  //calc.$result = document.getElementById('result');
+  //calc.result = calc.$result.textContent;
+  calc.dataBind('result', 'textContent');
+  calc.on$exp = function(v) { calc.equals(); };
+};
+    </script>
+
+  </head>
+  <body>
+    <div id="display">
+      <div id="exp"></div>
+      <div id="result"></div>
+    </div>
+    
+    <div>
+     <div id="keyboard">
+      <div id="keyboard-digits">
+        <button onclick="calc.literal(event)">7</button>
+        <button onclick="calc.literal(event)">8</button>
+        <button onclick="calc.literal(event)">9</button>
+
+        <button onclick="calc.literal(event)">4</button>
+        <button onclick="calc.literal(event)">5</button>
+        <button onclick="calc.literal(event)">6</button>
+
+        <button onclick="calc.literal(event)">1</button>
+        <button onclick="calc.literal(event)">2</button>
+        <button onclick="calc.literal(event)">3</button>
+
+        <button onclick="calc.literal(event)">.</button>
+        <button onclick="calc.literal(event)">0</button>
+        <button onclick="calc.equalsBtn()">=</button>
+      </div>
+
+      <div id="keyboard-operators">
+        <button onclick="calc.del()">DEL</button>
+        <button onclick="calc.div()"><big>&div;</big></button>
+        <button onclick="calc.mul()"><big>&times;</big></button>
+        <button onclick="calc.sub()"><big>-</big></button>
+        <button onclick="calc.add()"><big>+</big></button>
+      </div>
+
+      <div id="keyboard-specials">
+        <button onclick="calc.fn(event)">sin</button>
+        <button onclick="calc.fn(event)">cos</button>
+        <button onclick="calc.fn(event)">tan</button>
+
+        <button onclick="calc.fn(event)">ln</button>
+        <button onclick="calc.fn(event)">log</button>
+        <button onclick="" disabled>!</button>
+
+        <button onclick="calc.literal(event)">&pi;</button>
+        <button onclick="calc.literal(event)">e</button>
+        <button onclick="" disabled>^</button>
+
+        <button onclick="calc.literal(event)">(</button>
+        <button onclick="calc.literal(event)">)</button>
+        <button onclick="calc.fn(event)">&radic;</button>
+
+      </div> 
+     </div>
+    </div>
+  </body>
+</html>
